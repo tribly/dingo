@@ -1,0 +1,2 @@
+token = "asdf"
+url = "http://localhost:<port>/upload"
