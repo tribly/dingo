@@ -35,6 +35,11 @@ func loadConfig() {
 func main() {
 	loadConfig()
 
+	if len(os.Args) < 2 {
+		fmt.Println("Missing filename")
+		os.Exit(1)
+	}
+
 	fileName := os.Args[1]
 	url := conf.Url
 
