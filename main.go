@@ -61,6 +61,7 @@ func main() {
 	io.Copy(fbw, file)
 	bw.Close()
 
+
 	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
 		println(err.Error())
@@ -71,7 +72,8 @@ func main() {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		println(err.Error())
+		fmt.Println("Couldn't connect to server", url)
+		os.Exit(1)
 	}
 
 	body, err := io.ReadAll(resp.Body)
