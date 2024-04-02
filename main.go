@@ -1,12 +1,15 @@
 package main
 
 import (
+	//"archive/zip"
+	"archive/zip"
 	"bytes"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
@@ -32,6 +35,51 @@ func loadConfig() {
 	}
 }
 
+func zipit(dir string) {
+	file, err := os.Create("tmp.zip")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	w := zip.NewWriter(file)
+	defer w.Close()
+
+	walker := func(path string, info os.FileInfo, err error) error {
+		fmt.Println("Crawling:", path)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		f, err := w.Create(path)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(f, file)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	err = filepath.Walk(dir, walker)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	loadConfig()
 
@@ -42,6 +90,14 @@ func main() {
 
 	fileName := os.Args[1]
 	url := conf.Url
+
+	a, _ := os.Stat(fileName)
+	var file *os.File
+
+	if a.IsDir() {
+		zipit(fileName)
+		fileName = "tmp.zip"
+	}
 
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -60,7 +116,6 @@ func main() {
 
 	io.Copy(fbw, file)
 	bw.Close()
-
 
 	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
