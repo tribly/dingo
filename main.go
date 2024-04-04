@@ -35,8 +35,14 @@ func loadConfig() {
 	}
 }
 
-func zipit(dir string) {
-	file, err := os.Create("tmp.zip")
+func zipit(dir string) string {
+	cache_dir, err := os.UserCacheDir()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	zip_file := filepath.Join(cache_dir, "dingo.zip")
+	file, err := os.Create(zip_file)
 	if err != nil {
 		panic(err)
 	}
@@ -78,6 +84,49 @@ func zipit(dir string) {
 	if err != nil {
 		panic(err)
 	}
+
+	return zip_file
+}
+
+func upload(fileNames []string) {
+	file, err := os.Open(fileNames[0])
+	if err != nil {
+		println(err.Error())
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	client := &http.Client{}
+	buf := new(bytes.Buffer)
+	bw := multipart.NewWriter(buf)
+	fbw, err := bw.CreateFormFile("fil", fileNames[0])
+	if err != nil {
+		println(err.Error())
+	}
+
+	io.Copy(fbw, file)
+	bw.Close()
+
+	req, err := http.NewRequest("POST", conf.Url, buf)
+	if err != nil {
+		println(err.Error())
+	}
+
+	req.Header.Set("Authorization", conf.Token)
+	req.Header.Add("Content-Type", bw.FormDataContentType())
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Couldn't connect to server", conf.Url)
+		os.Exit(1)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		println(err.Error())
+	}
+
+	fmt.Printf("%s\n", string(body))
 }
 
 func main() {
@@ -88,53 +137,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	fileName := os.Args[1]
-	url := conf.Url
+	file_names := os.Args[1:]
 
-	a, _ := os.Stat(fileName)
-	var file *os.File
+	f, _ := os.Stat(file_names[0])
 
-	if a.IsDir() {
-		zipit(fileName)
-		fileName = "tmp.zip"
+	if f.IsDir() {
+		zip_name := zipit(file_names[0])
+		upload([]string{zip_name}) // temp fix
+		err := os.Remove(zip_name)
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// It's not a dir
+		upload(file_names)
 	}
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		println(err.Error())
-		os.Exit(1)
-	}
-	defer file.Close()
-
-	client := &http.Client{}
-	buf := new(bytes.Buffer)
-	bw := multipart.NewWriter(buf)
-	fbw, err := bw.CreateFormFile("fil", fileName)
-	if err != nil {
-		println(err.Error())
-	}
-
-	io.Copy(fbw, file)
-	bw.Close()
-
-	req, err := http.NewRequest("POST", url, buf)
-	if err != nil {
-		println(err.Error())
-	}
-
-	req.Header.Set("Authorization", conf.Token)
-	req.Header.Add("Content-Type", bw.FormDataContentType())
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Couldn't connect to server", url)
-		os.Exit(1)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		println(err.Error())
-	}
-
-	fmt.Printf("%s\n", string(body))
 }
