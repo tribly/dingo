@@ -52,7 +52,6 @@ func zipit(dir string) string {
 	defer w.Close()
 
 	walker := func(path string, info os.FileInfo, err error) error {
-		fmt.Println("Crawling:", path)
 		if err != nil {
 			return err
 		}
