@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"archive/zip"
 	"archive/zip"
 	"bytes"
 	"fmt"
@@ -87,7 +86,7 @@ func zipit(dir string) string {
 	return zip_file
 }
 
-func upload(fileNames []string) {
+func file_upload(fileNames []string) {
 	file, err := os.Open(fileNames[0])
 	if err != nil {
 		println(err.Error())
@@ -95,15 +94,45 @@ func upload(fileNames []string) {
 	}
 	defer file.Close()
 
+	buf := new(bytes.Buffer)
+
+	io.Copy(buf, file)
+	uploadBuf(*buf)
+}
+
+func noPipe() {
+	if len(os.Args) < 2 {
+		fmt.Println("Missing filename")
+		os.Exit(1)
+	}
+
+	file_names := os.Args[1:]
+
+	f, _ := os.Stat(file_names[0])
+
+	if f.IsDir() {
+		zip_name := zipit(file_names[0])
+		file_upload([]string{zip_name}) // temp fix
+		err := os.Remove(zip_name)
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		// It's not a dir
+		file_upload(file_names)
+	}
+}
+
+func uploadBuf(buf_upload bytes.Buffer) {
 	client := &http.Client{}
 	buf := new(bytes.Buffer)
 	bw := multipart.NewWriter(buf)
-	fbw, err := bw.CreateFormFile("fil", fileNames[0])
+	fbw, err := bw.CreateFormFile("fil", "fil")
 	if err != nil {
 		println(err.Error())
 	}
 
-	io.Copy(fbw, file)
+	io.Copy(fbw, bytes.NewReader(buf_upload.Bytes()))
 	bw.Close()
 
 	req, err := http.NewRequest("POST", conf.Url, buf)
@@ -131,24 +160,17 @@ func upload(fileNames []string) {
 func main() {
 	loadConfig()
 
-	if len(os.Args) < 2 {
-		fmt.Println("Missing filename")
-		os.Exit(1)
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		panic(err.Error())
 	}
 
-	file_names := os.Args[1:]
-
-	f, _ := os.Stat(file_names[0])
-
-	if f.IsDir() {
-		zip_name := zipit(file_names[0])
-		upload([]string{zip_name}) // temp fix
-		err := os.Remove(zip_name)
-		if err != nil {
-			panic(err.Error())
-		}
+	if (fi.Mode() & os.ModeNamedPipe) != 0 {
+		buf := new(bytes.Buffer)
+		io.Copy(buf, os.Stdin)
+		uploadBuf(*buf)
 	} else {
-		// It's not a dir
-		upload(file_names)
+		noPipe()
 	}
+
 }
