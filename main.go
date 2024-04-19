@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
@@ -97,7 +98,7 @@ func file_upload(fileNames []string) {
 	buf := new(bytes.Buffer)
 
 	io.Copy(buf, file)
-	uploadBuf(*buf)
+	uploadBuf(*buf, path.Ext(fileNames[0]))
 }
 
 func noPipe() {
@@ -123,11 +124,12 @@ func noPipe() {
 	}
 }
 
-func uploadBuf(buf_upload bytes.Buffer) {
+func uploadBuf(buf_upload bytes.Buffer, file_extension string) {
 	client := &http.Client{}
 	buf := new(bytes.Buffer)
 	bw := multipart.NewWriter(buf)
-	fbw, err := bw.CreateFormFile("fil", "fil")
+
+	fbw, err := bw.CreateFormFile("fil", file_extension)
 	if err != nil {
 		println(err.Error())
 	}
@@ -168,7 +170,7 @@ func main() {
 	if (fi.Mode() & os.ModeNamedPipe) != 0 {
 		buf := new(bytes.Buffer)
 		io.Copy(buf, os.Stdin)
-		uploadBuf(*buf)
+		uploadBuf(*buf, "") // tmp fix
 	} else {
 		noPipe()
 	}
