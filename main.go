@@ -170,7 +170,7 @@ func main() {
 	if (fi.Mode() & os.ModeNamedPipe) != 0 {
 		buf := new(bytes.Buffer)
 		io.Copy(buf, os.Stdin)
-		uploadBuf(*buf, "") // tmp fix
+		uploadBuf(*buf, "x") // tmp fix
 	} else {
 		noPipe()
 	}
