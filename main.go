@@ -156,7 +156,7 @@ func uploadBuf(buf_upload bytes.Buffer, file_extension string) {
 		println(err.Error())
 	}
 
-	fmt.Printf("%s\n", string(body))
+	fmt.Printf("%s", string(body))
 }
 
 func main() {
