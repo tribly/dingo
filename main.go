@@ -129,12 +129,18 @@ func uploadBuf(buf_upload bytes.Buffer, file_extension string) {
 	buf := new(bytes.Buffer)
 	bw := multipart.NewWriter(buf)
 
-	fbw, err := bw.CreateFormFile("fil", file_extension)
+	tbw, err := bw.CreateFormField("token")
 	if err != nil {
 		println(err.Error())
 	}
+	tbw.Write([]byte(conf.Token))
 
-	io.Copy(fbw, bytes.NewReader(buf_upload.Bytes()))
+	fbw, err := bw.CreateFormFile("files", file_extension)
+	if err != nil {
+		println(err.Error())
+	}
+	fbw.Write(buf_upload.Bytes())
+
 	bw.Close()
 
 	req, err := http.NewRequest("POST", conf.Url, buf)
